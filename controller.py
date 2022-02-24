@@ -4,14 +4,15 @@ from rclpy.node import Node
 # import message definitions for receiving status and position
 from mavros_msgs.msg import State
 from sensor_msgs.msg import NavSatFix
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
 # import message definition for sending setpoint
 from geographic_msgs.msg import GeoPoseStamped
+from geometry_msgs.msg import Twist
 
 # import service definitions for changing mode, arming, take-off and generic command
 from mavros_msgs.srv import SetMode, CommandBool, CommandTOL, CommandLong
-
 # import a_star
+# from .risk_management import RiskManage
 
 class FenswoodDroneController(Node):
 
@@ -34,22 +35,30 @@ class FenswoodDroneController(Node):
         # and make a placeholder for the last sent target
         self.last_target = GeoPoseStamped()
         # initial state for finite state machine
-        self.control_state = 'init'
+        # self.control_state = 'init'
+        self.control_state = 'check'
         # timer for time spent in each state
         self.state_timer = 0
-
         # multi goal position, original: 51.4233628, -2.671761
         self.goal_position = [[51.423, -2.671], [51.422, -2.668]]
+        # create publisher for output risk msg to risk_management node
+        self.risk_msg_pub = self.create_publisher(String, '/vehicle_1/risk_msg_input', 10)
+        self.risk_msg = String()
+        # create publisher for control velocity
+        self.velocity_pub = self.create_publisher(Twist, '/vehicle_1/mavros/setpoint_velocity/cmd_vel_unstamped', 10)
+        self.velocity = Twist()
+
+        self.setting_alt = None
 
     def start(self):
         # set up two subscribers, one for vehicle state...
         state_sub = self.create_subscription(State, '/vehicle_1/mavros/state', self.state_callback, 10)
         # ...and the other for global position
         pos_sub = self.create_subscription(NavSatFix, '/vehicle_1/mavros/global_position/global', self.position_callback, 10)
-        
-        # create subscriber for receiving message
-        message_sub = self.create_subscription(String, '/hello/sub', self.message_callback, 10)
+        # create subscriber for risk management
+        risk_sub = self.create_subscription(String, '/vehicle_1/risk_alarm_state', self.risk_alarm_callback ,10)
 
+        interface_sub = self.create_subscription(Float32, '/vehicle_1/interface_alt_output', self.interface_alt_callback, 10)
         # create a ROS2 timer to run the control actions
         self.timer = self.create_timer(1.0, self.timer_callback)
 
@@ -67,9 +76,17 @@ class FenswoodDroneController(Node):
         self.get_logger().debug('Drone at {}N,{}E altitude {}m'.format(msg.latitude,
                                                                         msg.longitude,
                                                                         self.last_alt_rel))
-    
-    def message_callback(self, msg):
-        self.get_logger().info('receive messege: {}'.format(msg))
+
+    def risk_alarm_callback(self, msg):
+        if msg.data == '-1':
+            self.control_state = 'init'
+        if msg.data == '1':
+            self.control_state = 'stop'
+        if msg.data == '2':
+            self.control_state = 'auto'
+
+    def interface_alt_callback(self, msg):
+        self.setting_alt = msg
 
     def request_data_stream(self,msg_id,msg_interval):
         cmd_req = CommandLong.Request()
@@ -105,19 +122,36 @@ class FenswoodDroneController(Node):
         self.get_logger().info('Sent drone to {}N, {}E, altitude {}m'.format(lat,lon,alt)) 
 
     def state_transition(self):
-        if self.control_state =='init':
+        if self.control_state == 'check':
+            self.risk_msg.data = 'arm check'
+            self.risk_msg_pub.publish(self.risk_msg)
+
+        elif self.control_state == 'stop':
+            self.velocity.linear.x = float(0)
+            self.velocity.linear.y = float(0)
+            self.velocity.linear.z = float(0)
+            self.velocity.angular.x = float(0)
+            self.velocity.angular.y = float(0)
+            self.velocity.angular.z = float(0)
+            self.velocity_pub.publish(self.velocity)
+        
+        elif self.control_state == 'auto':
+            pass
+
+        elif self.control_state =='init':
             if self.last_status:
                 if self.last_status.system_status==3:
                     self.get_logger().info('Drone initialized')
                     # send command to request regular position updates
-                    self.request_data_stream(33, 1000000)
+                    self.request_data_stream(33, 1000000) # global
 
                     self.request_data_stream(32, 1000000)
 
-                    self.request_data_stream(147, 10000)
                     # change mode to GUIDED
                     self.change_mode("GUIDED")
                     # move on to arming
+                    self.risk_msg.data = 'init finished'
+                    self.risk_msg_pub.publish(self.risk_msg)
                     return('arming')
                 else:
                     return('init')
@@ -127,13 +161,11 @@ class FenswoodDroneController(Node):
         elif self.control_state == 'arming':
             if self.last_status.armed:
                 self.get_logger().info('Arming successful')
-                # armed - grab init alt for relative working
                 if self.last_pos:
                     self.last_alt_rel = 0.0
                     self.init_alt = self.last_pos.altitude
-                # send takeoff command
-                self.takeoff(20.0)
-                return('climbing')
+                return('takeoff')
+                # armed - grab init alt for relative working
             elif self.state_timer > 60:
                 # timeout
                 self.get_logger().error('Failed to arm')
@@ -142,20 +174,20 @@ class FenswoodDroneController(Node):
                 self.arm_request()
                 return('arming')
 
+        elif self.control_state == 'takeoff':
+            # send takeoff command
+            if self.setting_alt:
+                self.takeoff(self.setting_alt)
+                return('climbing')
+            elif self.state_timer > 60:
+                return('exit')
+            else:
+                return('takeoff')
+
         elif self.control_state == 'climbing':
-            if self.last_alt_rel > 19.0:
+            if self.last_alt_rel > self.setting_alt - 1.0:
                 self.get_logger().info('Close enough to flight altitude')
-                # move drone by sending setpoint message
-                # self.flyto(51.423, -2.671, self.init_alt - 30.0) # unexplained correction factor on altitude
-
-                if len(self.goal_position) == 0:
-                    self.get_logger().info('No goal position')
-                    return('landing')
-
-                else:
-                    current_goal_position = self.goal_position[0]
-                    self.flyto(current_goal_position[0], current_goal_position[1], self.init_alt - 30.0)
-                    return('on_way')
+                return('goal_position_checking')
             elif self.state_timer > 60:
                 # timeout
                 self.get_logger().error('Failed to reach altitude')
@@ -163,6 +195,16 @@ class FenswoodDroneController(Node):
             else:
                 self.get_logger().info('Climbing, altitude {}m'.format(self.last_alt_rel))
                 return('climbing')
+
+        elif self.control_state == 'goal_position_checking':
+            if len(self.goal_position) == 0:
+                self.get_logger().info('No goal position')
+                return('landing')
+
+            else:
+                current_goal_position = self.goal_position[0]
+                self.flyto(current_goal_position[0], current_goal_position[1], self.init_alt - 30.0)
+                return('on_way')  
 
         elif self.control_state == 'on_way':
             d_lon = self.last_pos.longitude - self.last_target.pose.position.longitude
@@ -173,7 +215,7 @@ class FenswoodDroneController(Node):
                 if len(self.goal_position) == 0:
                     return('landing')
                 else:
-                    return('climbing')
+                    return('goal_position_checking')
             elif self.state_timer > 60:
                 # timeout
                 self.get_logger().error('Failed to reach target')
@@ -181,11 +223,15 @@ class FenswoodDroneController(Node):
             else:
                 self.get_logger().info('Target error {},{}'.format(d_lat,d_lon))
                 return('on_way')
-            
+
+        elif self.control_state == 'volcano_nearby':
+            pass
+
         elif self.control_state == 'landing':
             # return home and land
-            self.change_mode("RTL")
-            return('exit')
+            # self.change_mode("RTL")
+            # return('exit')
+            pass
 
         elif self.control_state == 'exit':
             # nothing else to do
