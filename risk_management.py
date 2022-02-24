@@ -12,7 +12,7 @@ class RiskInterface(Node):
         # create publisher for message
         self.risk_msg_pub = self.create_publisher(String, '/vehicle_1/risk_msg_output', 10)
         self.risk_alarm_pub = self.create_publisher(String, '/vehicle_1/risk_alarm_state', 10)
-        self.risk_ass = RiskManage()
+        self.risk_ass = RiskAssessment()
         self.risk_pub_msg = String()
         self.risk_state_msg = String()
 
