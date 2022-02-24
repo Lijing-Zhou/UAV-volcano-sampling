@@ -26,8 +26,9 @@ setup(
             "controller_simple_class = fenswood_drone_controller.controller_simple_class:main",
             "controller_modular = fenswood_drone_controller.controller_modular:main",
             "controller_finite_state = fenswood_drone_controller.controller_finite_state:main",
-            "image_processor = fenswood_drone_controller.image_processor:main"
-            # "interface_publisher = fenswood_drone_controller.interface_publisher:main",
+            "risk_management = fenswood_drone_controller.risk_management:main"
+            # "image_processor = fenswood_drone_controller.image_processor:main"
+            # "interface_publisher = fenswood_drone_controller.interface_publisher:main"
             # "path_planning = fenswood_drone_controller.path_planning:main",
         ]
     }
