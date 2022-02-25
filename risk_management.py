@@ -46,7 +46,6 @@ class RiskInterface(Node):
         self.timer = self.create_timer(0.1, self.timer_callback)
 
     def risk_msg_callback(self, msg):
-        self.get_logger().info('receiving the risk msg')
         if msg.data == 'init finished':
             if self.last_pos:
                 self.init_alt = self.last_pos.altitude
@@ -55,6 +54,7 @@ class RiskInterface(Node):
                 self.get_logger().info('risk init pos error')
 
         if msg.data == 'arm check':
+            self.get_logger().info('receiving the risk msg')
             # self.risk_pub_msg = self.risk_ass.arm_check()
             self.risk_pub_msg.data = 'Please check if the UAV can be armed'
             self.risk_msg_pub.publish(self.risk_pub_msg)
@@ -64,21 +64,22 @@ class RiskInterface(Node):
             self.risk_alarm_pub.publish(self.risk_state_msg)
 
     def timer_callback(self):
-        if self.last_pos and self.last_alt_rel:
-            if self.risk_ass.border_check(self.last_pos.latitude, self.last_pos.longitude, self.last_alt_rel):
-                self.risk_state_msg.data = '-1'
-            else:
-                self.risk_state_msg.data = '1'
-        else:
-            self.get_logger().info('position data error')
+        pass
+        # if self.last_pos and self.last_alt_rel:
+        #     if self.risk_ass.border_check(self.last_pos.latitude, self.last_pos.longitude, self.last_alt_rel):
+        #         self.risk_state_msg.data = '-1'
+        #     else:
+        #         self.risk_state_msg.data = '1'
+        # else:
+        #     self.get_logger().info('position data error')
 
-        if self.battery_power:
-            if self.risk_ass.battery_check(self.battery_power):
-                self.risk_state_msg.data = '-1'
-            else:
-                self.risk_state_msg.data = '2'
-        else:
-            self.get_logger().info('battery data error')
+        # if self.battery_power:
+        #     if self.risk_ass.battery_check(self.battery_power):
+        #         self.risk_state_msg.data = '-1'
+        #     else:
+        #         self.risk_state_msg.data = '2'
+        # else:
+        #     self.get_logger().info('battery data error')
         
     def position_callback(self,msg):
         if self.init_alt:
