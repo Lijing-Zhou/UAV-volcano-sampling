@@ -2,13 +2,15 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 from mavros_msgs.srv import CommandLong
-from sensor_msgs.msg import NavSatFix
-from sensor_msgs.msg import BatteryState
+from sensor_msgs.msg import NavSatFix, BatteryState
+from .risk_ass import RiskAssessment
 
 class RiskInterface(Node):
 
     def __init__(self):
         super().__init__("risk_management")
+
+        self.cmd_cli = self.create_client(CommandLong, '/vehicle_1/mavros/cmd/command')
         # create publisher for message
         self.risk_msg_pub = self.create_publisher(String, '/vehicle_1/risk_msg_output', 10)
         self.risk_alarm_pub = self.create_publisher(String, '/vehicle_1/risk_alarm_state', 10)
@@ -23,7 +25,6 @@ class RiskInterface(Node):
         
         # battery data
         self.battery_power = None
-
         """
         risk alarm state:
                     -1: safe
@@ -45,6 +46,7 @@ class RiskInterface(Node):
         self.timer = self.create_timer(0.1, self.timer_callback)
 
     def risk_msg_callback(self, msg):
+        self.get_logger().info('receiving the risk msg')
         if msg.data == 'init finished':
             if self.last_pos:
                 self.init_alt = self.last_pos.altitude
@@ -53,7 +55,8 @@ class RiskInterface(Node):
                 self.get_logger().info('risk init pos error')
 
         if msg.data == 'arm check':
-            self.risk_pub_msg = self.risk_ass.arm_check()
+            # self.risk_pub_msg = self.risk_ass.arm_check()
+            self.risk_pub_msg.data = 'Please check if the UAV can be armed'
             self.risk_msg_pub.publish(self.risk_pub_msg)
         
         if msg.data == 'arm checked':
@@ -76,9 +79,7 @@ class RiskInterface(Node):
                 self.risk_state_msg.data = '2'
         else:
             self.get_logger().info('battery data error')
-
         
-
     def position_callback(self,msg):
         if self.init_alt:
             self.last_alt_rel = msg.altitude - self.init_alt        
@@ -95,76 +96,14 @@ class RiskInterface(Node):
         future = self.cmd_cli.call_async(cmd_req)
         self.get_logger().info('Requested msg {} every {} us'.format(msg_id,msg_interval))    
 
-class RiskAssessment():
-
-    def __init__(self):
-        self.alt_border = 50
-
-    # 3D border check
-    def border_check(self, lat, lon, alt):
-        """
-        # index = 5
-        # A, B, C ,D counter-clockwise
-        self.flight_region = [[51.4234260, -2.6717208], [51.4212462, -2.6701340], 
-                                [51.4224401, -2.6656878], [51.4246918, -2.6670602]]
-        # A, B, C, D clockwise
-        self.no_fly_zone = [[51.4224669, -2.6720597], [51.4235482, -2.6673723], 
-                            [51.4228490, -2.6670013], [51.4217450, -2.6714016]]
-        """
-        # !!!it maybe could use safety_area
-
-        # flight region border check
-        lat_flight_ab = round((-137371 * lon * 100000 + 47753256419832) / 1000000000000, 7)
-        if lat < lat_flight_ab:
-            return False
-        lat_flight_bc = round((26852 * lat * 100000 + 52138230581680) / 1000000000000, 7)
-        if lat < lat_flight_bc:
-            return False
-        lat_flight_cd = round((-164070 * lat * 100000 + 47048846126540) / 1000000000000, 7)
-        if lat > lat_flight_cd:
-            return False
-        lat_flight_da = round((27160 * lat * 100000 + 52149065369280) / 1000000000000, 7)
-        if lat > lat_flight_da:
-            return False
-        
-        # no fly zone border check
-        lat_no_fly_ab = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        lat_no_fly_bc = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        lat_no_fly_cd = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        # lat_no_fly_da = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        if lat < lat_no_fly_ab and lat > lat_no_fly_cd and lat < lat_no_fly_cd:
-            return False
-
-        if alt > 50:
-            return False
-
-        return True
-
-    """
-    safty check:
-            arm_check
-    """
-    def arm_check(self):
-        msg = String()
-        msg.data = 'Please check if the UAV can be armed'
-        return msg
-
-    """
-    sensor check:
-            battery
-    """
-    # battery check 30%
-    def battery_check(self, battery_msg):
-        if battery_msg.percentage < 0.3:
-            return False
-        return True
+def main(args=None):
     
-    """
-    complete_failure:
-            GPS failure
-            IMU failure
-            Barometer failure
-    """
-    def complete_failure(self):
-        # do nothing
-        pass
+    rclpy.init(args=args)
+
+    risk_management_node = RiskInterface()
+    risk_management_node.start()
+    rclpy.spin(risk_management_node)
+
+
+if __name__ == '__main__':
+    main()
