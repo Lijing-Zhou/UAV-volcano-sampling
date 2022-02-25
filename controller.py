@@ -59,9 +59,14 @@ class FenswoodDroneController(Node):
         risk_sub = self.create_subscription(String, '/vehicle_1/risk_alarm_state', self.risk_alarm_callback ,10)
 
         interface_sub = self.create_subscription(Float32, '/vehicle_1/interface_alt_output', self.interface_alt_callback, 10)
+
+        risk_msg_output = self.create_subscription(String, '/vehicle_1/risk_msg_output', self.risk_msg_callback, 10)
+
         # create a ROS2 timer to run the control actions
         self.timer = self.create_timer(1.0, self.timer_callback)
 
+    def risk_msg_callback(self, msg):
+        pass
     # on receiving status message, save it to global
     def state_callback(self,msg):
         self.last_status = msg
@@ -125,6 +130,7 @@ class FenswoodDroneController(Node):
         if self.control_state == 'check':
             self.risk_msg.data = 'arm check'
             self.risk_msg_pub.publish(self.risk_msg)
+            return('check')
 
         elif self.control_state == 'stop':
             self.velocity.linear.x = float(0)
@@ -134,9 +140,10 @@ class FenswoodDroneController(Node):
             self.velocity.angular.y = float(0)
             self.velocity.angular.z = float(0)
             self.velocity_pub.publish(self.velocity)
+            return('stop')
         
         elif self.control_state == 'auto':
-            pass
+            return('auto')
 
         elif self.control_state =='init':
             if self.last_status:
