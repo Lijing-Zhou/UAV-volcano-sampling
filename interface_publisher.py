@@ -1,25 +1,38 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
+from geometry_msgs.msg import TwistStamped
 
 class Interface(Node):
 
     def __init__(self):
         super().__init__("interface_publisher")
-        # create publisher for message
-        self.message_pub = self.create_publisher(String, '/hello/sub', 10)
-        self.message_timer = 0
+        # create publisher for sending msg to interface to show
+        self.interface_output_pub = self.create_publisher(String, '/vehicle_1/interface_output', 10)
+        self.interface_output_msg = String()
+
+        self.interface_alt_pub = self.create_publisher(Float32, '/vehicle_1/interface_alt_output', 10)
+        self.setting_altitude = 20.0
 
     def start(self):
-        timer_period = 1.0
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        controller_sub = self.create_subscription(String, '/vehicle_1/control_state', self.controller_callback, 10)
 
-    def timer_callback(self):
-        msg = String()
-        msg.data = '{}'.format(self.message_timer)
-        self.message_pub.publish(msg)
-        self.get_logger().info("send message successfully")
-        self.message_timer += 1
+        interface_input_alt_sub = self.create_subscription(String, '/vehicle_1/interface_alt_input', self.interface_alt_input_callback,10)
+
+        interface_set_alt_sub = self.create_subscription(Float32, 'vehicle_1/interface_set_alt', self.interface_set_alt_callback, 10)
+
+    def controller_callback(self, msg):
+        if msg.data == 'wait for user: alt':
+            self.interface_output_msg.data = 'Please set altitude'
+            self.interface_output_pub.publisher(self.interface_msg)
+
+    def interface_alt_input_callback(self, msg):
+        if msg.data == 'init altitude':
+            self.interface_alt_pub.publish(self.setting_altitude)
+
+    def interface_set_alt_callback(self, msg):
+        if msg:
+            self.interface_alt_pub.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
