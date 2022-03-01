@@ -1,2 +1,4 @@
 import math
-import 
+
+def a():
+    pass
