@@ -1,4 +1,4 @@
 import math
 
-def a():
+def b():
     pass
