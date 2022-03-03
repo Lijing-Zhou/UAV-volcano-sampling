@@ -40,7 +40,7 @@ class FenswoodDroneController(Node):
         # timer for time spent in each state
         self.state_timer = 0
         # multi goal position, original: 51.4233628, -2.671761
-        self.goal_position = [[51.423, -2.671], [51.422, -2.668]]
+        self.goal_position = []
         # create publisher for output risk msg to risk_management node
         self.risk_msg_pub = self.create_publisher(String, '/vehicle_1/risk_msg_input', 10)
         self.risk_msg = String()
@@ -48,7 +48,7 @@ class FenswoodDroneController(Node):
         self.velocity_pub = self.create_publisher(Twist, '/vehicle_1/mavros/setpoint_velocity/cmd_vel_unstamped', 10)
         self.velocity = Twist()
 
-        self.setting_alt = None
+        self.setting_alt = 20.0
 
     def start(self):
         # set up two subscribers, one for vehicle state...
@@ -62,8 +62,20 @@ class FenswoodDroneController(Node):
 
         risk_msg_output = self.create_subscription(String, '/vehicle_1/risk_msg_output', self.risk_msg_callback, 10)
 
+        pos_list_sub = self.create_subscription(String, '/position_list', self.pos_list_callback, 10)
+
         # create a ROS2 timer to run the control actions
         self.timer = self.create_timer(1.0, self.timer_callback)
+
+    def pos_list_callback(self, msg):
+        init_x = -2.67155
+        init_y = 51.42341
+        pos_msg = msg.data.split(",")
+        pos_x = (float)(pos_msg[0])
+        pos_y = (float)(pos_msg[1])
+        if abs(pos_x - init_x) > 0.001 or abs(pos_y - init_y) > 0.001:
+            pos_xy = [pos_y, pos_x]
+            self.goal_position.append(pos_xy)
 
     def risk_msg_callback(self, msg):
         pass

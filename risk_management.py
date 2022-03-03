@@ -98,7 +98,6 @@ class RiskInterface(Node):
         self.get_logger().info('Requested msg {} every {} us'.format(msg_id,msg_interval))    
 
 def main(args=None):
-    
     rclpy.init(args=args)
 
     risk_management_node = RiskInterface()

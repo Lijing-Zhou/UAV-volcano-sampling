@@ -1,3 +1,5 @@
+from std_msgs.msg import String
+
 class RiskAssessment():
 
     def __init__(self):
@@ -17,25 +19,25 @@ class RiskAssessment():
         # !!!it maybe could use safety_area
 
         # flight region border check
-        lat_flight_ab = round((-137371 * lon * 100000 + 47753256419832) / 1000000000000, 7)
+        lat_flight_ab = round((-137371 * lon * 10000000 + 47753256419832) / 1000000000000, 7)
         if lat < lat_flight_ab:
             return False
-        lat_flight_bc = round((26852 * lat * 100000 + 52138230581680) / 1000000000000, 7)
+        lat_flight_bc = round((26852 * lon * 10000000 + 52138230581680) / 1000000000000, 7)
         if lat < lat_flight_bc:
             return False
-        lat_flight_cd = round((-164070 * lat * 100000 + 47048846126540) / 1000000000000, 7)
+        lat_flight_cd = round((-164070 * lon * 1000000 + 47048846126540) / 1000000000000, 7)
         if lat > lat_flight_cd:
             return False
-        lat_flight_da = round((27160 * lat * 100000 + 52149065369280) / 1000000000000, 7)
+        lat_flight_da = round((27160 * lon * 10000000 + 52149065369280) / 1000000000000, 7)
         if lat > lat_flight_da:
             return False
         
         # no fly zone border check
-        lat_no_fly_ab = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        lat_no_fly_bc = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        lat_no_fly_cd = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        # lat_no_fly_da = round((23068 * lon * 100000 + 52038857631596) / 1000000000000, 7)
-        if lat < lat_no_fly_ab and lat > lat_no_fly_cd and lat < lat_no_fly_cd:
+        lat_no_fly_ab = round((23068 * lon * 10000000 + 52038857631596) / 1000000000000, 7)
+        lat_no_fly_bc = round((-188464 * lon * 10000000 + 46396511668528) / 1000000000000, 7)
+        lat_no_fly_cd = round((25089 * lon * 10000000 + 52091972956157) / 1000000000000, 7)
+        # lat_no_fly_da = round((-109695 * lon * 100000 + 48491351012085) / 1000000000000, 7)
+        if lat < lat_no_fly_ab and lat < lat_no_fly_bc and lat > lat_no_fly_cd:
             return False
 
         if alt > 50:
