@@ -40,6 +40,7 @@ class FenswoodDroneController(Node):
         # timer for time spent in each state
         self.state_timer = 0
         # multi goal position, original: 51.4233628, -2.671761
+        # self.goal_position = [[51.4234178, -2.6715506], [51.4219206, -2.6687700]]
         self.goal_position = []
         # create publisher for output risk msg to risk_management node
         self.risk_msg_pub = self.create_publisher(String, '/vehicle_1/risk_msg_input', 10)
@@ -73,9 +74,9 @@ class FenswoodDroneController(Node):
         pos_msg = msg.data.split(",")
         pos_x = (float)(pos_msg[0])
         pos_y = (float)(pos_msg[1])
-        if abs(pos_x - init_x) > 0.001 or abs(pos_y - init_y) > 0.001:
-            pos_xy = [pos_y, pos_x]
-            self.goal_position.append(pos_xy)
+        # if abs(pos_x - init_x) > 0.001 or abs(pos_y - init_y) > 0.001:
+        pos_xy = [pos_y, pos_x]
+        self.goal_position.append(pos_xy)
 
     def risk_msg_callback(self, msg):
         pass
@@ -250,7 +251,7 @@ class FenswoodDroneController(Node):
             # return home and land
             # self.change_mode("RTL")
             # return('exit')
-            pass
+            return('landing')
 
         elif self.control_state == 'exit':
             # nothing else to do

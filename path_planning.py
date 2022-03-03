@@ -112,11 +112,9 @@ class PathPlanning(Node):
 
         start_node = self.PathNode(self.tf_xy_local_position(sx, self.min_x),
                                 self.tf_xy_local_position(sy, self.min_y), 0.0, -1)
-        self.get_logger().info('this is planning start_node_x={}, y={}'.format(start_node.x, start_node.y))
 
         goal_node = self.PathNode(self.tf_xy_local_position(gx, self.min_x),
                                 self.tf_xy_local_position(gy, self.min_y), 0.0, -1)
-        self.get_logger().info('this is planning goal_node_x={}, y={}'.format(goal_node.x, goal_node.y))
 
         open_set, closed_set = dict(), dict()
         open_set[self.tf_dict_index(start_node)] = start_node
@@ -288,17 +286,20 @@ class PathPlanning(Node):
         rx, ry = self.planning(-267155, 5142341, -266877, 5142192)
         if len(rx) == len(ry):
             self.get_logger().info('this is path_planning {}'.format(len(rx)))
+            current_pos = [-2.67155, 51.42341]
 
             for i in range(len(rx) - 1 , -1, -1):
                 self.get_logger().info('this is path_planning pub xy pos {}'.format(i))
 
                 position_x = rx[i] / 100000             
-                position_y = ry[i] / 100000              
-                position_xy = str(position_x) + "," + str(position_y) 
-                position_msg = String()
-                position_msg.data = position_xy
-                self.get_logger().info('x={}, y={}'.format(position_x, position_y))
-                self.position_list_pub.publish(position_msg)
+                position_y = ry[i] / 100000             
+                if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.0005:
+                    current_pos = [position_x, position_y]
+                    position_xy = str(position_x) + "," + str(position_y) 
+                    position_msg = String()
+                    position_msg.data = position_xy
+                    self.get_logger().info('x={}, y={}'.format(position_x, position_y))
+                    self.position_list_pub.publish(position_msg)
 
         # self.timer = self.create_timer(1, self.timer_callback)
 
