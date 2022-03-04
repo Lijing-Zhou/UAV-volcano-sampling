@@ -69,8 +69,8 @@ class FenswoodDroneController(Node):
         self.timer = self.create_timer(1.0, self.timer_callback)
 
     def pos_list_callback(self, msg):
-        init_x = -2.67155
-        init_y = 51.42341
+        # init_x = -2.67155
+        # init_y = 51.42341
         pos_msg = msg.data.split(",")
         pos_x = (float)(pos_msg[0])
         pos_y = (float)(pos_msg[1])
@@ -166,6 +166,8 @@ class FenswoodDroneController(Node):
                     self.request_data_stream(33, 1000000) # global
 
                     self.request_data_stream(32, 1000000)
+
+                    self.request_data_stream(147, 1000000)
 
                     # change mode to GUIDED
                     self.change_mode("GUIDED")
