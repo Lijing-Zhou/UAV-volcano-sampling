@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-
+from std_msgs.msg import Int32MultiArray, MultiArrayDimension, MultiArrayLayout
 import math
 # a star
 class PathPlanning(Node):
@@ -16,6 +16,7 @@ class PathPlanning(Node):
         super().__init__("path_planning")
 
         self.position_list_pub = self.create_publisher(String, '/position_list', 10)
+        self.pos_list_pub = self.create_publisher(Int32MultiArray, '/pos_test', 10)
         self.resolution = 1                         
         self.rr = 100                                 
         # 3----2
@@ -40,6 +41,8 @@ class PathPlanning(Node):
         self.x_width, self.y_width = 0, 0
         self.motion = self.get_motion_model()         
         self.message = "AStar init" 
+
+        self.pos_t = [[1, 1], [2, 2]]
 
     class PathNode:
         def __init__(self, x, y, cost, parent_index):
@@ -281,6 +284,17 @@ class PathPlanning(Node):
         return ox, oy            
         
     def start(self):
+        pos = Int32MultiArray()
+        pos_layout = MultiArrayLayout()
+        pos_dim = MultiArrayDimension()
+        pos.data = [v for nested in self.pos_t for v in nested]
+        pos_dim.label = 'pos'
+        pos_dim.size = len(self.pos_t)
+        pos_dim.stride = len(pos.data)
+        pos_layout.dim = [pos_dim]
+        pos_layout.data_offset = 0
+        pos.layout = pos_layout
+
         # self.ox, self.oy = self.obstacle_map_init(self.fly_boundary_position, self.no_fly_zone) 
         self.calc_obstacle_map() 
         rx, ry = self.planning(-267155, 5142341, -266877, 5142192)
@@ -301,6 +315,7 @@ class PathPlanning(Node):
                     self.get_logger().info('x={}, y={}'.format(position_x, position_y))
                     self.position_list_pub.publish(position_msg)
 
+                    self.pos_list_pub.publish(pos)
         # self.timer = self.create_timer(1, self.timer_callback)
 
     def timer_callback(self):
