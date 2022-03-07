@@ -44,6 +44,9 @@ class PathPlanning(Node):
 
         self.pos_t = [[1, 1], [2, 2]]
 
+        self.path_planning_controller_pub = self.create_publisher(String, '/path_planning_controller', 10)
+        self.path_planning_controller_msg = String()
+
     class PathNode:
         def __init__(self, x, y, cost, parent_index):
             self.x = x
@@ -295,6 +298,8 @@ class PathPlanning(Node):
         pos_layout.data_offset = 0
         pos.layout = pos_layout
 
+        controller_path_planning_sub = self.create_subscription(String, '/controller_path_planning', self.controller_path_planning_msg_callback,10)
+
         # self.ox, self.oy = self.obstacle_map_init(self.fly_boundary_position, self.no_fly_zone) 
         self.calc_obstacle_map() 
         rx, ry = self.planning(-267155, 5142341, -266877, 5142192)
@@ -309,29 +314,23 @@ class PathPlanning(Node):
                 position_y = ry[i] / 100000             
                 if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.0005:
                     current_pos = [position_x, position_y]
-                    position_xy = str(position_x) + "," + str(position_y) 
+                    # position_xy = str(position_x) + "," + str(position_y) 
+                    position_xy = '{},{}'.format(position_x, position_y)
                     position_msg = String()
                     position_msg.data = position_xy
                     self.get_logger().info('x={}, y={}'.format(position_x, position_y))
                     self.position_list_pub.publish(position_msg)
 
                     self.pos_list_pub.publish(pos)
-        # self.timer = self.create_timer(1, self.timer_callback)
+            msg = String()
+            msg.data = 'pos list finished'
+            self.pos_list_pub.publish(msg)
 
-    def timer_callback(self):
-        self.get_logger().info('this is path_planning time_callback')          
-
-        # if len(rx) == len(ry):
-        #     for i in range(len(rx)):
-        #         self.get_logger().info('this is path_planning pub xy pos {}'.format(i))
-
-        #         position_x = rx[i]             
-        #         position_y = ry[i]              
-        #         position_xy = "x=" + str(position_x) + " " + "y=" + str(position_y) 
-        #         position_msg = String()
-        #         position_msg.data = position_xy
-        #         self.get_logger().info('x={}, y={}'.format(position_x, position_y))
-        #         self.position_list_pub.publish(position_msg)
+    def controller_path_planning_msg_callback(self, msg):
+        controller_path_planning_msg = msg.data.split(",")
+        if controller_path_planning_msg[0] == 'return_home':
+            pass #调用path函数
+            self.path_planning_controller_msg.data = 'return home path planning finished'
 
 def main(args=None):
     rclpy.init(args=args)
