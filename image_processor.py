@@ -1,7 +1,3 @@
-"""
-Very simple image processor based on example from
-https://automaticaddison.com/getting-started-with-opencv-in-ros-2-foxy-fitzroy-python/
-"""
 import rclpy                                                    # type: ignore
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -9,98 +5,113 @@ import cv2
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 
-
-class ImageProcessor(Node):
+class Imageprocessor(Node):
 
     def __init__(self):
         super().__init__('image_processor')
         self.br = CvBridge()
-        self.red_low_H = 0
-        self.red_low_S = 60
-        self.red_low_V = 60
-        self.red_high_H = 6
-        self.red_high_S = 255
-        self.red_high_V = 255
-
-        self.yellow_low_H = 26
-        self.yellow_low_S = 60
-        self.yellow_low_V = 60
-        self.yellow_high_H = 34
-        self.yellow_high_S = 255
-        self.yellow_high_V = 255
-
-        self.blue_low_H = 100
-        self.blue_low_S = 43
-        self.blue_low_V = 46
-        self.blue_high_H = 120
-        self.blue_high_S = 255
-        self.blue_high_V = 255
-
-        self.img_pub = self.create_publisher(Image, '/vehicle_1/camear/image_output', 10)        
+        self.red_low_h = 0
+        self.red_low_s = 43
+        self.red_low_v = 46
+        self.red_high_h = 6
+        self.red_high_s = 255
+        self.red_high_v = 255
+        self.img_pub = self.create_publisher(Image, '/vehicle_1/camera/image_output', 10)
+        self.move_red_pub = self.create_publisher(String,'/vehicle_1/camera/moving_info',10)
+        self.camera_state = 'stop'
+        self.color_state = 'red'
 
     def start(self):
-        # set up subscriber for image
         state_sub = self.create_subscription(Image, '/vehicle_1/camera/image_raw', self.image_callback, 10)
 
-    # on receiving image, convert and log information
-    def image_callback(self, msg):
-        img = self.br.imgmsg_to_cv2(msg, 'bgr8')
-        # can do OpenCV stuff on img now
-        # shp = img.shape # just get the size
-        # self.get_logger().info('Got an image of {} x {}'.format(shp[0],shp[1]))
+        controller_image_process_sub = self.create_subscription(String, '/controller_image_process', self.controller_image_process_msg_callback, 10)
 
-        # color = 'red'
-        gs_img = cv2.GaussianBlur(img, (5, 5), 0)
-        hsv_img = cv2.cvtColor(gs_img, cv2.COLOR_BGR2HSV)
-        erode_img = cv2.erode(hsv_img, None, iterations=2)
-        inRange_img = cv2.inRange(erode_img, (self.red_low_H, self.red_low_S, self.red_low_V)
-                                , (self.red_high_H, self.red_high_S, self.red_high_V))
-        cnts = cv2.findContours(inRange_img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
-        img_processed = cv2.drawContours(img, cnts, -1, (0, 0, 0), 2)
-        # inRange_img = self.image_preprocess(img, color)
-        # img_output = self.draw_border(inRange_img, img)
-        self.img_pub.publish(self.br.cv2_to_imgmsg(img_processed, 'bgr8'))
-        self.get_logger().info('image publish successfully')
+    def controller_image_process_msg_callback(self, msg):
+        if msg.data == 'start image process':
+            self.camera_state = 'start'
 
-    def image_preprocess(self, img, color):
-        if img == None:
-            self.get_logger().info('No image input')
-            return None
+        elif msg.data == 'landing':
+            self.color_state = 'yellow'
         
         else:
-            # GussianBlur: make the image more blurred, the pixels are smoother
-            gs_img = cv2.GaussianBlur(img, (5, 5), 0)
-            # convert BGR to HSV
-            hsv_img = cv2.cvtColor(gs_img, cv2.COLOR_BGR2HSV)
-            # d
-            erode_img = cv2.erode(hsv_img, None, iterations=2)
-            # Remove all parts oustide the color threshold range and convert into a binary image
-            if color == 'red':   
-                inRange_img = cv2.inRange(erode_img, (self.red_low_H, self.red_low_S, self.red_low_V)
-                                        , (self.red_high_H, self.red_high_S, self.red_high_V))
-            elif color == 'yellow':
-                inRange_img = cv2.inRange(erode_img, (self.yellow_low_H, self.yellow_low_S, self.yellow_low_V)
-                                        , (self.yellow_high_H, self.yellow_high_S, self.yellow_high_V))        
-            self.get_logger().info('image_preprocess successfully')
-            return inRange_img
+            pass
 
-    def draw_border(self, inRange_img, img):
-        # only find the peripheral contour and the inflection point information
-        cnts = cv2.findContours(inRange_img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    def image_callback(self,msg):
+        
+        img = self.br.imgmsg_to_cv2(msg,'bgr8')
+        order_send= String()
+        #img_output=self.img_processor(img)
+        gs_img = cv2.GaussianBlur(img, (5, 5), 0)
+        hsv_image= cv2.cvtColor(gs_img, cv2.COLOR_BGR2HSV)
+        erode_msg=cv2.erode(hsv_image, None, iterations=4)
+        mask1 = cv2.inRange(erode_msg,(self.red_low_h,self.red_low_s,self.red_low_v),(self.red_high_h,self.red_high_s,self.red_high_v))
 
-        img = cv2.drawContours(img, cnts, -1, (255, 255, 255), 2)
+        #dilation = cv2.dilate(erode_msg, None, iterations=4)
+        cnts = cv2.findContours(mask1.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        img_output = cv2.drawContours(img, cnts, -1, (0, 0, 0), 2)
+        self.img_pub.publish(self.br.cv2_to_imgmsg(img_output,'bgr8'))
+#         contours, hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if self.camera_state == 'start':
+            if len(cnts) > 0:
+        # cv2.boundingRect()返回轮廓矩阵的坐标值，四个值为x, y, w, h， 其中x, y为左上角坐标，w,h为矩阵的宽和高
+                boxes = [cv2.boundingRect(c) for c in cnts]
+                for box in boxes:
+                    x, y, w, h = box
+                    self.get_logger().info('x={}, y={},w={},h={}'.format(x,y,w,h))
+                    if ((x<420) and (y<150) and ((x+w)>180) and ((x+w)<420) and ((y+h)>150)):
+                        self.get_logger().info('up')
+                        order_send.data='up'
+                        self.move_red_pub.publish(order_send)
+                    else:
+                        if ((y>150) and (x<180) and ((x+w)>180)):
+                            self.get_logger().info('left')
+                            order_send.data='left'
+                            self.move_red_pub.publish(order_send)
+                        else:
+                            if ((x>180) and ((y+h)>350) and (x<420) and (y<350)):
+                                self.get_logger().info('down')
+                                order_send.data='dowm'
+                                self.move_red_pub.publish(order_send)
+                            else:
+                                if ((y<350) and (x<420) and ((y+h)<350)):
+                                    self.get_logger().info('right')
+                                    order_send.data='right'
+                                    self.move_red_pub.publish(order_send)
+        else:
+            pass
+#         #绘制矩形框对轮廓进行定位
+#                 img_output = cv2.rectangle(img, (x, y), (x+w, y+h), (153, 153, 0), 2)
+#         #if img_output:
 
-        return img
+    def img_processor(self, img):
+        gs_img = cv2.GaussianBlur(img, (5, 5), 0)
+        hsv_image= cv2.cvtColor(gs_img, cv2.COLOR_BGR2HSV)
+        mask1 = cv2.inRange(hsv_image,(self.red_low_h,self.red_low_s,self.red_low_v),(self.red_high_h,self.red_high_s,self.red_high_v))
+        erode_msg=cv2.erode(mask1, None, iterations=4)
+        
+        dilation = cv2.dilate(erode_msg, None, iterations=4)
+        contours, hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if len(contours) > 0:
+    # cv2.boundingRect()返回轮廓矩阵的坐标值，四个值为x, y, w, h， 其中x, y为左上角坐标，w,h为矩阵的宽和高
+            boxes = [cv2.boundingRect(c) for c in contours]
+            for box in boxes:
+                x, y, w, h = box
+        #绘制矩形框对轮廓进行定位
+                origin_pic = cv2.rectangle(img, (x, y), (x+w, y+h), (153, 153, 0), 2)
+            self.get_logger().info('get')
+            return origin_pic
+        else: 
+            return img
 
 
 def main(args=None):
-    
     rclpy.init(args=args)
-
-    image_node = ImageProcessor()
+    image_node= Imageprocessor()
     image_node.start()
     rclpy.spin(image_node)
-
+    
 
 if __name__ == '__main__':
     main()
+
+

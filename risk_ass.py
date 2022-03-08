@@ -16,7 +16,6 @@ class RiskAssessment():
         self.no_fly_zone = [[51.4224669, -2.6720597], [51.4235482, -2.6673723], 
                             [51.4228490, -2.6670013], [51.4217450, -2.6714016]]
         """
-        # !!!it maybe could use safety_area
 
         # flight region border check
         lat_flight_ab = round((-137371 * lon * 10000000 + 47753256419832) / 1000000000000, 7)
@@ -60,7 +59,7 @@ class RiskAssessment():
     """
     # battery check 30%
     def battery_check(self, battery_msg):
-        if battery_msg.percentage < 0.3:
+        if battery_msg < 0.3:
             return False
         return True
     

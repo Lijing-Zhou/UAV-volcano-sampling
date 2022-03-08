@@ -15,7 +15,6 @@ class PathPlanning(Node):
         """
         super().__init__("path_planning")
 
-        self.position_list_pub = self.create_publisher(String, '/position_list', 10)
         self.pos_list_pub = self.create_publisher(Int32MultiArray, '/pos_test', 10)
         self.resolution = 1                         
         self.rr = 100                                 
@@ -187,8 +186,8 @@ class PathPlanning(Node):
             flight_ab = round((-137107 * x + 477603048596) / 100000) + obstacle_para
             flight_bc = round((  26966 * x + 521412672558) / 100000) + obstacle_para
             flight_cd = round((-163043 * x + 470762353576) / 100000) - obstacle_para
-            flight_da = round((  27253 * x + 521515438516) / 100000) - obstacle_para
-            no_fly_ab = round((  23077 * x + 520390889785) / 100000) + obstacle_para
+            flight_da = round((  27253 * x + 521515438516) / 100000)
+            no_fly_ab = round((  16667 * x + 518681105735) / 100000) + obstacle_para
             no_fly_bc = round((-189189 * x + 463771693707) / 100000) + obstacle_para
             no_fly_cd = round((  25000 * x + 520895900000) / 100000) - obstacle_para
             for iy in range(self.y_width):
@@ -242,10 +241,12 @@ class PathPlanning(Node):
 
     def get_motion_model(self):
         # x, y, cost
-        motion = [[1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, -1],
-                    [-1, -1, math.sqrt(2)], [-1, 1, math.sqrt(2)],
-                    [1, -1, math.sqrt(2)], [1, 1, math.sqrt(2)]]
-
+        # motion = [[1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, -1],
+        #             [-1, -1, math.sqrt(2)], [-1, 1, math.sqrt(2)],
+        #             [1, -1, math.sqrt(2)], [1, 1, math.sqrt(2)]]
+        motion = [[1, 0, 2], [0, 1, 2], [-1, 0, 2], [0, -1, -2],
+                    [-1, -1, 1], [-1, 1, 1],
+                    [1, -1, 1], [1, 1, 1]]
         return motion
 
     # 假设禁飞区的顶点坐标为no_fly_zone, 逆时针
@@ -285,7 +286,7 @@ class PathPlanning(Node):
             oy.append(round((-23068 * i * 100000 + 52038857631596) / 1000000000000, 7))
 
         return ox, oy            
-        
+
     def start(self):
         pos = Int32MultiArray()
         pos_layout = MultiArrayLayout()
@@ -304,33 +305,47 @@ class PathPlanning(Node):
         self.calc_obstacle_map() 
         rx, ry = self.planning(-267155, 5142341, -266877, 5142192)
         if len(rx) == len(ry):
-            self.get_logger().info('this is path_planning {}'.format(len(rx)))
             current_pos = [-2.67155, 51.42341]
 
             for i in range(len(rx) - 1 , -1, -1):
-                self.get_logger().info('this is path_planning pub xy pos {}'.format(i))
+                position_x = rx[i] / 100000             
+                position_y = ry[i] / 100000             
+                if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.001:
+                    current_pos = [position_x, position_y]
+                    # position_xy = str(position_x) + "," + str(position_y) 
+                    position_xy = '{},{}'.format(position_x, position_y)
+                    self.path_planning_controller_msg.data = position_xy
+                    self.get_logger().info('x={}, y={}'.format(position_x, position_y))
+                    self.path_planning_controller_pub.publish(self.path_planning_controller_msg)
 
+                    # self.pos_list_pub.publish(pos)
+            # self.path_planning_controller_msg.data = 'pos list finished'
+            # self.path_planning_controller_pub.publish(self.path_planning_controller_msg)
+
+    def controller_path_planning_msg_callback(self, msg):
+        controller_path_planning_msg = msg.data.split(",")
+        if controller_path_planning_msg[0] == 'return_home':
+
+            cur_lon = round(controller_path_planning_msg[2] * 100000)
+            cur_lat = round(controller_path_planning_msg[1] * 100000)
+            self.path_planning_home(cur_lon, cur_lat)
+            self.path_planning_controller_msg.data = 'return home path planning finished'
+            self.path_planning_controller_pub.publish(self.path_planning_controller_msg)
+
+    def path_planning_home(self, cur_lon, cur_lat):
+        rx, ry = self.planning(cur_lon, cur_lat, -267155, 5142341)
+        if len(rx) == len(ry):
+            current_pos = [cur_lon, cur_lat]
+            for i in range(len(rx) - 1 , -1, -1):
                 position_x = rx[i] / 100000             
                 position_y = ry[i] / 100000             
                 if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.0005:
                     current_pos = [position_x, position_y]
                     # position_xy = str(position_x) + "," + str(position_y) 
                     position_xy = '{},{}'.format(position_x, position_y)
-                    position_msg = String()
-                    position_msg.data = position_xy
+                    self.path_planning_controller_msg.data = position_xy
                     self.get_logger().info('x={}, y={}'.format(position_x, position_y))
-                    self.position_list_pub.publish(position_msg)
-
-                    self.pos_list_pub.publish(pos)
-            msg = String()
-            msg.data = 'pos list finished'
-            self.pos_list_pub.publish(msg)
-
-    def controller_path_planning_msg_callback(self, msg):
-        controller_path_planning_msg = msg.data.split(",")
-        if controller_path_planning_msg[0] == 'return_home':
-            pass #调用path函数
-            self.path_planning_controller_msg.data = 'return home path planning finished'
+                    self.path_planning_controller_pub.publish(self.path_planning_controller_msg)
 
 def main(args=None):
     rclpy.init(args=args)
