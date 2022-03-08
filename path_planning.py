@@ -241,12 +241,15 @@ class PathPlanning(Node):
 
     def get_motion_model(self):
         # x, y, cost
-        # motion = [[1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, -1],
+        # motion = [[1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, 1],
         #             [-1, -1, math.sqrt(2)], [-1, 1, math.sqrt(2)],
         #             [1, -1, math.sqrt(2)], [1, 1, math.sqrt(2)]]
-        motion = [[1, 0, 2], [0, 1, 2], [-1, 0, 2], [0, -1, -2],
-                    [-1, -1, 1], [-1, 1, 1],
-                    [1, -1, 1], [1, 1, 1]]
+        motion = [[1, 0, 2], [0, 1, 1], [-1, 0, 2], [0, -1, 1],
+                    [-1, -1, math.sqrt(5)], [-1, 1, math.sqrt(5)],
+                    [1, -1, math.sqrt(5)], [1, 1, math.sqrt(5)]]                    
+        # motion = [[1, 0, 2], [0, 1, 2], [-1, 0, 2], [0, -1, 2],
+        #             [-1, -1, 1], [-1, 1, 1],
+        #             [1, -1, 1], [1, 1, 1]]
         return motion
 
     # 假设禁飞区的顶点坐标为no_fly_zone, 逆时针
@@ -326,8 +329,8 @@ class PathPlanning(Node):
         controller_path_planning_msg = msg.data.split(",")
         if controller_path_planning_msg[0] == 'return_home':
 
-            cur_lon = round(controller_path_planning_msg[2] * 100000)
-            cur_lat = round(controller_path_planning_msg[1] * 100000)
+            cur_lon = round(float(controller_path_planning_msg[2]) * 100000)
+            cur_lat = round(float(controller_path_planning_msg[1]) * 100000)
             self.path_planning_home(cur_lon, cur_lat)
             self.path_planning_controller_msg.data = 'return home path planning finished'
             self.path_planning_controller_pub.publish(self.path_planning_controller_msg)
@@ -335,6 +338,8 @@ class PathPlanning(Node):
     def path_planning_home(self, cur_lon, cur_lat):
         rx, ry = self.planning(cur_lon, cur_lat, -267155, 5142341)
         if len(rx) == len(ry):
+            cur_lon = cur_lon / 100000
+            cur_lat = cur_lat / 100000
             current_pos = [cur_lon, cur_lat]
             for i in range(len(rx) - 1 , -1, -1):
                 position_x = rx[i] / 100000             

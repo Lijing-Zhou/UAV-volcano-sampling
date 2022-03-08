@@ -68,7 +68,6 @@ class FenswoodDroneController(Node):
         self.original_position = [51.4234178, -2.6715506]
         self.target_position = [51.4219206, -2.6687700]
         self.goal_position = []
-        self.pos_list_state = 'unknow'
         self.target_dis = 65
 
         # create publisher for control velocity
@@ -102,6 +101,9 @@ class FenswoodDroneController(Node):
 
         #为了测试状态机
         self.controller_foxyglove_pub = self.create_publisher(String, '/controller_foxyglove', 10)
+
+        # 为测试
+        self.flag = 0
 
     def start(self):
         # set up two subscribers, one for vehicle state...
@@ -247,10 +249,6 @@ class FenswoodDroneController(Node):
         self.target_pub.publish(self.last_target)
         self.get_logger().info('Sent drone to {}N, {}E, altitude {}m'.format(lat,lon,alt)) 
 
-    def del_goal_position(self):
-        self.goal_position = []
-        self.pos_list_state = 'unknow'
-
     def velocity_control(self, linear_x, linear_y, linear_z, angular_x, angular_y, angular_z):
         self.velocity.linear.x = float(linear_x)
         self.velocity.linear.y = float(linear_y)
@@ -393,8 +391,12 @@ class FenswoodDroneController(Node):
         elif self.control_state == 'climbing':
             if self.last_alt_rel > self.setting_alt - 1.0:
                 self.get_logger().info('Close enough to flight altitude')
-                self.check_state = 'annulus_check'
-                return('checking')
+                if self.flag == 0:
+                    self.check_state = 'annulus_check'
+                    return('checking')
+                # 为测试
+                else:
+                    return('return_home')
             elif self.state_timer > 60:
                 # timeout
                 self.get_logger().error('Failed to reach altitude')
@@ -436,14 +438,20 @@ class FenswoodDroneController(Node):
         elif self.control_state == 'landing_down':
             if self.last_alt_rel < 1:
                 self.get_logger().info('Close enough to ground')
-                if self.annulus_state == 'in_annulus':
-                    self.controller_interface_annulus_msg.data = 'in_annulus landing finished'
-                    self.controller_interface_annulus_pub.publish(self.controller_interface_annulus_msg)
-                    return('wait_for_user')
+                if self.last_status.armed == False:
+                    # 为测试
+                    self.flag = 1
+                    self.task_state = 'task_completed'
+                    if self.annulus_state == 'in_annulus':
+                        self.controller_interface_annulus_msg.data = 'in_annulus landing finished'
+                        self.controller_interface_annulus_pub.publish(self.controller_interface_annulus_msg)
+                        return('wait_for_user')
+                    else:
+                        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        return('wait_for_user')# 为测试改为的wait for user 
+                        # return('exit')
                 else:
-                    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    return('wait_for_user')# 为测试改为的wait for user 
-                    # return('exit')
+                    return('landing_down')
             elif self.state_timer > 60:
                 # timeout
                 self.get_logger().error('Failed to land')
@@ -474,10 +482,12 @@ class FenswoodDroneController(Node):
             else:
                 return('return_home')
 
-        elif self.control_state == 'return_home': 
+        elif self.control_state == 'return_home':
+            self.goal_position = []
             # ！！！ 需要auto mode去让用户不能打断
-            self.controller_path_planning_msg.data = 'return_home,{},{},{},{}'.format(self.last_pos.latitude, self.last_pos.longitude,
-                                                                            self.original_position[0], self.original_position[1])
+            # self.controller_path_planning_msg.data = 'return_home,{},{},{},{}'.format(self.last_pos.latitude, self.last_pos.longitude,
+            #                                                                 self.original_position[0], self.original_position[1])
+            self.controller_path_planning_msg.data = 'return_home,{},{}'.format(self.last_pos.latitude, self.last_pos.longitude)
             self.controller_path_planning_pub.publish(self.controller_path_planning_msg)
             return('wait_for_path_planning')
 
