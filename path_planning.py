@@ -38,7 +38,7 @@ class PathPlanning(Node):
         self.max_x, self.max_y = 0, 0
         self.obstacle_map = None
         self.x_width, self.y_width = 0, 0
-        self.motion = self.get_motion_model()         
+        self.motion = None       
         self.message = "AStar init" 
 
         self.pos_t = [[1, 1], [2, 2]]
@@ -145,6 +145,10 @@ class PathPlanning(Node):
 
             closed_set[c_id] = current
 
+            if current.x > -266737:
+                self.motion = self.get_motion_model(2)
+            else:
+                self.motion = self.get_motion_model(1)
             # expend the grid search based on motion model
             for i, _ in enumerate(self.motion):
                 node = self.PathNode(current.x + self.motion[i][0], current.y + self.motion[i][1],
@@ -186,7 +190,7 @@ class PathPlanning(Node):
             flight_ab = round((-137107 * x + 477603048596) / 100000) + obstacle_para
             flight_bc = round((  26966 * x + 521412672558) / 100000) + obstacle_para
             flight_cd = round((-163043 * x + 470762353576) / 100000) - obstacle_para
-            flight_da = round((  27253 * x + 521515438516) / 100000)
+            flight_da = round((  27253 * x + 521515438516) / 100000) - obstacle_para
             no_fly_ab = round((  16667 * x + 518681105735) / 100000) + obstacle_para
             no_fly_bc = round((-189189 * x + 463771693707) / 100000) + obstacle_para
             no_fly_cd = round((  25000 * x + 520895900000) / 100000) - obstacle_para
@@ -208,11 +212,18 @@ class PathPlanning(Node):
                         self.obstacle_map[ix][iy] = False
                     elif y > no_fly_ab and y < flight_da:
                         self.obstacle_map[ix][iy] = False
-                elif x < self.no_fly_zone[2][0]:
-                    if y > flight_bc and y < no_fly_cd:
+                # elif x < self.no_fly_zone[2][0]:
+                #     if y > flight_bc and y < no_fly_cd:
+                #         self.obstacle_map[ix][iy] = False
+                #     elif y > no_fly_bc and y < flight_da:
+                #         self.obstacle_map[ix][iy] = False
+
+                elif x < self.no_fly_zone[2][0] + 20:
+                    if y > flight_bc and y < (self.no_fly_zone[2][1] - 10):
                         self.obstacle_map[ix][iy] = False
-                    elif y > no_fly_bc and y < flight_da:
+                    elif y > (self.no_fly_zone[1][1] + 10) and y < flight_da:
                         self.obstacle_map[ix][iy] = False
+
                 elif x < self.fly_boundary_position[3][0]:
                     if y > flight_bc and y < flight_da:
                         self.obstacle_map[ix][iy] = False
@@ -239,17 +250,22 @@ class PathPlanning(Node):
         #                 self.obstacle_map[ix][iy] = True
         #                 break        
 
-    def get_motion_model(self):
+    def get_motion_model(self, state):
         # x, y, cost
         # motion = [[1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, 1],
         #             [-1, -1, math.sqrt(2)], [-1, 1, math.sqrt(2)],
         #             [1, -1, math.sqrt(2)], [1, 1, math.sqrt(2)]]
-        motion = [[1, 0, 2], [0, 1, 1], [-1, 0, 2], [0, -1, 1],
-                    [-1, -1, math.sqrt(5)], [-1, 1, math.sqrt(5)],
-                    [1, -1, math.sqrt(5)], [1, 1, math.sqrt(5)]]                    
-        # motion = [[1, 0, 2], [0, 1, 2], [-1, 0, 2], [0, -1, 2],
-        #             [-1, -1, 1], [-1, 1, 1],
-        #             [1, -1, 1], [1, 1, 1]]
+        # motion = [[1, 0, 2], [0, 1, 1], [-1, 0, 2], [0, -1, 1],
+        #             [-1, -1, math.sqrt(5)], [-1, 1, math.sqrt(5)],
+        #             [1, -1, math.sqrt(5)], [1, 1, math.sqrt(5)]]
+        if state == 1:                    
+            motion = [[1, 0, 4], [0, 1, 3], [-1, 0, 4], [0, -1, 3],
+                        [-1, -1, 5], [-1, 1, 5],
+                        [1, -1, 5], [1, 1, 5]]   
+        else:
+            motion = [[1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, 1],
+                        [-1, -1, math.sqrt(2)], [-1, 1, math.sqrt(2)],
+                        [1, -1, math.sqrt(2)], [1, 1, math.sqrt(2)]]            
         return motion
 
     # 假设禁飞区的顶点坐标为no_fly_zone, 逆时针
@@ -313,7 +329,28 @@ class PathPlanning(Node):
             for i in range(len(rx) - 1 , -1, -1):
                 position_x = rx[i] / 100000             
                 position_y = ry[i] / 100000             
-                if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.001:
+                # d_x_no_fly_b = position_x - (-2.66737)
+                # d_y_no_fly_b = position_y - 51.42355
+                # d_x_no_fly_c = position_x - (-2.667)
+                # d_y_no_fly_c = position_y - 51.42285
+                # if (abs(d_x_no_fly_b) < 0.0001) and (abs(d_y_no_fly_b) < 0.0001):
+                #     current_pos = [position_x, position_y]
+                #     # position_xy = str(position_x) + "," + str(position_y) 
+                #     position_xy = '{},{}'.format(position_x, position_y)
+                #     self.path_planning_controller_msg.data = position_xy
+                #     self.get_logger().info('x={}, y={}'.format(position_x, position_y))
+                #     self.path_planning_controller_pub.publish(self.path_planning_controller_msg)
+                #     continue
+                # if (abs(d_x_no_fly_c) < 0.0001) and (abs(d_y_no_fly_c) < 0.0001):
+                #     current_pos = [position_x, position_y]
+                #     # position_xy = str(position_x) + "," + str(position_y) 
+                #     position_xy = '{},{}'.format(position_x, position_y)
+                #     self.path_planning_controller_msg.data = position_xy
+                #     self.get_logger().info('x={}, y={}'.format(position_x, position_y))
+                #     self.path_planning_controller_pub.publish(self.path_planning_controller_msg)          
+                #     continue            
+
+                if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.0006:
                     current_pos = [position_x, position_y]
                     # position_xy = str(position_x) + "," + str(position_y) 
                     position_xy = '{},{}'.format(position_x, position_y)
@@ -344,7 +381,7 @@ class PathPlanning(Node):
             for i in range(len(rx) - 1 , -1, -1):
                 position_x = rx[i] / 100000             
                 position_y = ry[i] / 100000             
-                if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.0005:
+                if math.sqrt((current_pos[0] - position_x)**2 + (current_pos[1] - position_y)**2) > 0.0006:
                     current_pos = [position_x, position_y]
                     # position_xy = str(position_x) + "," + str(position_y) 
                     position_xy = '{},{}'.format(position_x, position_y)

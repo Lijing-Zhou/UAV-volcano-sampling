@@ -86,6 +86,9 @@ class FenswoodDroneController(Node):
         self.controller_risk_pub = self.create_publisher(String, '/controller_risk', 10)
         self.controller_risk_msg = String()
 
+        self.controller_risk_init_alt_pub = self.create_publisher(String, '/controller_risk/init_alt', 10)
+        self.controller_risk_init_alt_msg = String()
+
         self.controller_image_process_pub = self.create_publisher(String, '/controller_image_process', 10)
         self.controller_image_process_msg = String()
 
@@ -98,6 +101,8 @@ class FenswoodDroneController(Node):
         self.task_state = 'task_not_completed' # task_completed
 
         self.velocity_control_list = []
+
+        self.risk_alarm = 'unknow'  # risk状态初始化为未知
 
         #为了测试状态机
         self.controller_foxyglove_pub = self.create_publisher(String, '/controller_foxyglove', 10)
@@ -189,24 +194,30 @@ class FenswoodDroneController(Node):
                                                                         self.last_alt_rel))
 
     def risk_alarm_callback(self, msg):
-        if msg.data == '-1':
-            self.check_state = 'alt'
-            self.control_state = 'wait_for_user'
-            self.state_timer = 0
-        elif msg.data == '1':
-            self.control_state = 'stop'
-            self.state_timer = 0
-        elif msg.data == '2':
-            self.control_state = 'auto'
-            self.state_timer = 0
+        if self.risk_alarm != msg.data:
+            self.risk_alarm = msg.data
+            if msg.data == '-1':
+                self.check_state = 'alt'
+                self.control_state = 'checking'
+                self.state_timer = 0
+            elif msg.data == '1':
+                self.get_logger().info('Flyover border')
+                # self.control_state = 'stop'
+                # self.state_timer = 0
+            elif msg.data == '2':
+                self.get_logger().info('Low battery')
+                # self.task_state == 'task_completed'
+                # self.control_state = 'return_home'
+                # self.state_timer = 0
 
     def interface_controller_alt_callback(self, msg):
-        # self.setting_alt = float(msg)
-        # 为测试
-        self.setting_alt = 20.0
-        self.control_state = 'arming'
-        self.change_mode("GUIDED")
-        self.state_timer = 0
+        if self.risk_alarm == '-1': # 如果之后改了risk的逻辑，这里也要改
+            # self.setting_alt = float(msg.data)
+            # 为测试
+            self.setting_alt = 20.0
+            self.control_state = 'arming'
+            self.change_mode("GUIDED")
+            self.state_timer = 0
 
     def request_data_stream(self,msg_id,msg_interval):
         cmd_req = CommandLong.Request()
@@ -230,8 +241,6 @@ class FenswoodDroneController(Node):
 
     def takeoff(self,target_alt):
         takeoff_req = CommandTOL.Request()
-        # takeoff_req.longitude = self.last_pos.longitude
-        # takeoff_req.latitude = self.last_pos.latitude
         takeoff_req.altitude = target_alt
         future = self.takeoff_cli.call_async(takeoff_req)
         self.get_logger().info('Requested takeoff to {}m'.format(target_alt))
@@ -277,13 +286,11 @@ class FenswoodDroneController(Node):
 
                     self.request_data_stream(32, 1000000)
 
-                    self.request_data_stream(147, 1000000)
+                    self.request_data_stream(147, 10000)
 
                     # change mode to GUIDED
                     self.change_mode("GUIDED")
 
-                    self.controller_risk_msg.data = 'init finished'
-                    self.controller_risk_pub.publish(self.controller_risk_msg)
                     self.controller_interface_msg.data = 'init finished'
                     self.controller_interface_pub.publish(self.controller_interface_msg)
                     return('checking')
@@ -367,6 +374,8 @@ class FenswoodDroneController(Node):
                 if self.last_pos:
                     self.last_alt_rel = 0.0
                     self.init_alt = self.last_pos.altitude
+                    self.controller_risk_init_alt_msg.data = str(self.init_alt)
+                    self.controller_risk_init_alt_pub.publish(self.controller_risk_init_alt_msg)
                 return('takeoff')
                 # armed - grab init alt for relative working
             elif self.state_timer > 60:
@@ -376,6 +385,9 @@ class FenswoodDroneController(Node):
             else:
                 self.arm_request()
                 return('arming')
+
+        # publisher-->topic-->subscriber
+        # host -- serice --  
 
         elif self.control_state == 'takeoff':
             # send takeoff command

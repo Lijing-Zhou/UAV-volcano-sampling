@@ -24,7 +24,7 @@ class RiskAssessment():
         lat_flight_bc = round((26852 * lon * 10000000 + 52138230581680) / 1000000000000, 7)
         if lat < lat_flight_bc:
             return False
-        lat_flight_cd = round((-164070 * lon * 1000000 + 47048846126540) / 1000000000000, 7)
+        lat_flight_cd = round((-164070 * lon * 10000000 + 47048846126540) / 1000000000000, 7)
         if lat > lat_flight_cd:
             return False
         lat_flight_da = round((27160 * lon * 10000000 + 52149065369280) / 1000000000000, 7)
