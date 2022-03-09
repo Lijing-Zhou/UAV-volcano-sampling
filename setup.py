@@ -28,8 +28,8 @@ setup(
             "controller_finite_state = fenswood_drone_controller.controller_finite_state:main",
             "risk_management = fenswood_drone_controller.risk_management:main",
             "path_planning = fenswood_drone_controller.path_planning:main",
-            # "image_processor = fenswood_drone_controller.image_processor:main"
-            "interface_publisher = fenswood_drone_controller.interface_publisher:main"
+            "image_processor = fenswood_drone_controller.image_processor:main"
+            # "interface_publisher = fenswood_drone_controller.interface_publisher:main"
         ]
     }
 )

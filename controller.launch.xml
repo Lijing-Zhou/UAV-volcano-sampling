@@ -2,6 +2,6 @@
   <node pkg="fenswood_drone_controller" exec="controller" /> 
   <node pkg="fenswood_drone_controller" exec="risk_management" /> 
   <node pkg="fenswood_drone_controller" exec="path_planning" />
-  <!-- <node pkg="fenswood_drone_controller" exec="image_processor" /> -->
-  <node pkg="fenswood_drone_controller" exec="interface_publisher" />
+  <node pkg="fenswood_drone_controller" exec="image_processor" />
+  <!-- <node pkg="fenswood_drone_controller" exec="interface_publisher" /> -->
 </launch>
