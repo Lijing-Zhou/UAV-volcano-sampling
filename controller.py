@@ -156,7 +156,7 @@ class FenswoodDroneController(Node):
             velocity_msg = msg.data.split(',')
             velocity_x = float(velocity_msg[0])
             velocity_y = float(velocity_msg[1])
-            velocity_xy = [velocity_x, velocity_y]
+            velocity_xy = [-velocity_x, -velocity_y]
             self.velocity_control_list.append(velocity_xy)
             self.velocity_control(velocity_x, velocity_y, 0.0, 0.0, 0.0, 0.0)
 
