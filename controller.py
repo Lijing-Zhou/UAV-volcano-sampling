@@ -66,7 +66,8 @@ class FenswoodDroneController(Node):
         # multi goal position, original: 51.4233628, -2.671761
         # self.goal_position = [[51.4234178, -2.6715506], [51.4219206, -2.6687700]]
         self.original_position = [51.4234178, -2.6715506]
-        self.target_position = [51.4219206, -2.6687700]
+        # self.target_position = [51.4219206, -2.6687700]
+        self.target_position = [51.4214509, -2.6693021]
         self.goal_position = []
         self.target_dis = 65
 
@@ -141,13 +142,18 @@ class FenswoodDroneController(Node):
         self.control_state = msg.data
 
     def image_process_controller_msg_callback(self, msg):
-        if msg.data == 'landing':
+        if msg.data == 'LAND':
             self.control_state = 'landing'
             self.state_timer = 0
             self.task_state = 'task_completed'
+        elif msg.data == 'NONE':
+            pass
+        elif msg.data == 'DONE':
+            self.controller_image_process_msg.data = 'YELLOW'
+            self.controller_image_process_pub.publish(self.controller_image_process_msg)
         else:
             # 假设数据为'1,0',前面为x=,后面为y=,也就是'x=1,y=0'
-            velocity_msg = msg.split(',')
+            velocity_msg = msg.data.split(',')
             velocity_x = float(velocity_msg[0])
             velocity_y = float(velocity_msg[1])
             velocity_xy = [velocity_x, velocity_y]
@@ -288,6 +294,14 @@ class FenswoodDroneController(Node):
 
                     self.request_data_stream(147, 10000)
 
+                    self.request_data_stream(26, 1000000)
+
+                    self.request_data_stream(31, 1000000)
+
+                    self.request_data_stream(105, 1000000)
+                    # self.request_data_stream(135, 1000000)
+
+
                     # change mode to GUIDED
                     self.change_mode("GUIDED")
 
@@ -336,7 +350,7 @@ class FenswoodDroneController(Node):
             if self.task_state == 'task_completed':
                 return('landing')
             else:
-                self.controller_image_process_msg.data = 'start image process'
+                self.controller_image_process_msg.data = 'RED'
                 self.controller_image_process_pub.publish(self.controller_image_process_msg)
                 return('image_process')            
 
@@ -476,8 +490,8 @@ class FenswoodDroneController(Node):
             dis = self.geo_distance(self.last_pos.longitude, self.last_pos.latitude, self.target_position[1], self.target_position[0])
             if dis > 35.0 + 3.0 and dis < 50.0 - 3.0:
                 self.annulus_state = 'in_annulus'
-                self.controller_image_process_msg.data = 'in annulus'
-                self.controller_image_process_pub.publish(self.controller_image_process_msg)
+                # self.controller_image_process_msg.data = 'in annulus'
+                # self.controller_image_process_pub.publish(self.controller_image_process_msg)
             elif self.state_timer > 600:
                 if self.annulus_state == 'in_annulus':
                     return('fly_out_of_annulus')
