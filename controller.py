@@ -528,6 +528,10 @@ class FenswoodDroneController(Node):
                 else:
                     return('return_home')
 
+            dis = self.geo_distance(self.last_pos.longitude, self.last_pos.latitude, self.target_position[1], self.target_position[0])
+            if dis < 50:
+                self.annulus_state = 'in_annulus'
+
             return('image_process')
 
         elif self.control_state == 'fly_out_of_annulus':
@@ -548,6 +552,19 @@ class FenswoodDroneController(Node):
             self.controller_path_planning_msg.data = 'return_home,{},{}'.format(self.last_pos.latitude, self.last_pos.longitude)
             self.controller_path_planning_pub.publish(self.controller_path_planning_msg)
             return('wait_for_path_planning')
+
+        elif self.control_state == 'return_home_user':
+            if self.annulus_state == 'out_of_annulus':
+                self.goal_position = []
+                self.task_state = 'task_completed'
+                # ！！！ 需要auto mode去让用户不能打断
+                # self.controller_path_planning_msg.data = 'return_home,{},{},{},{}'.format(self.last_pos.latitude, self.last_pos.longitude,
+                #                                                                 self.original_position[0], self.original_position[1])
+                self.controller_path_planning_msg.data = 'return_home,{},{}'.format(self.last_pos.latitude, self.last_pos.longitude)
+                self.controller_path_planning_pub.publish(self.controller_path_planning_msg)
+                return('wait_for_path_planning')
+            else:
+                return('fly_out_of_annulus')
 
         elif self.control_state == 'wait_for_path_planning':
             if self.state_timer > 120: #给2分钟执行path planning, 以及传输数据
