@@ -7,7 +7,7 @@ from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String, Float64
 # import message definition for sending setpoint
 from geographic_msgs.msg import GeoPoseStamped
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TwistStamped
 
 from std_msgs.msg import Int32MultiArray
 
@@ -66,10 +66,10 @@ class FenswoodDroneController(Node):
         # multi goal position, original: 51.4233628, -2.671761
         # self.goal_position = [[51.4234178, -2.6715506], [51.4219206, -2.6687700]]
         self.original_position = [51.4234178, -2.6715506]
-        # self.target_position = [51.4219206, -2.6687700]
-        self.target_position = [51.4214509, -2.6693021]
+        self.target_position = [51.4219206, -2.6687700]
+        # self.target_position = [51.4214509, -2.6693021]
         self.goal_position = []
-        self.target_dis = 65
+        self.target_dis = 80
 
         # create publisher for control velocity
         self.velocity_pub = self.create_publisher(Twist, '/vehicle_1/mavros/setpoint_velocity/cmd_vel_unstamped', 10)
@@ -105,11 +105,15 @@ class FenswoodDroneController(Node):
 
         self.risk_alarm = 'unknow'  # risk状态初始化为未知
 
+        self.image_land_state = 0
+
+        self.cur_vel = Twist()
+
         #为了测试状态机
         self.controller_foxyglove_pub = self.create_publisher(String, '/controller_foxyglove', 10)
 
         # 为测试
-        self.flag = 0
+        # self.flag = 0
 
     def start(self):
         # set up two subscribers, one for vehicle state...
@@ -131,6 +135,8 @@ class FenswoodDroneController(Node):
 
         pos_t_sub = self.create_subscription(Int32MultiArray, '/pos_test', self.pos_t_callback, 10)
 
+        speed_sub = self.create_subscription(TwistStamped, '/vehicle_1/mavros/local_position/velocity_local', self.speed_callback,10)
+
         # 仅为测试
         foxyglove_controller_sub = self.create_subscription(String, '/foxyglove_controller', self.foxyglove_controller_msg_callback, 10)
 
@@ -141,24 +147,31 @@ class FenswoodDroneController(Node):
     def foxyglove_controller_msg_callback(self, msg):
         self.control_state = msg.data
 
+    def speed_callback(self,msg):
+        self.cur_vel = msg.twist
+
     def image_process_controller_msg_callback(self, msg):
-        if msg.data == 'LAND':
-            self.control_state = 'landing'
-            self.state_timer = 0
-            self.task_state = 'task_completed'
-        elif msg.data == 'NONE':
-            pass
-        elif msg.data == 'DONE':
-            self.controller_image_process_msg.data = 'YELLOW'
-            self.controller_image_process_pub.publish(self.controller_image_process_msg)
-        else:
-            # 假设数据为'1,0',前面为x=,后面为y=,也就是'x=1,y=0'
-            velocity_msg = msg.data.split(',')
-            velocity_x = float(velocity_msg[0])
-            velocity_y = float(velocity_msg[1])
-            velocity_xy = [-velocity_x, -velocity_y]
-            self.velocity_control_list.append(velocity_xy)
-            self.velocity_control(velocity_x, velocity_y, 0.0, 0.0, 0.0, 0.0)
+        if self.task_state == 'task_not_completed':
+            if msg.data == 'LAND':
+                if self.image_land_state == 0:
+                    self.control_state = 'landing'
+                    self.state_timer = 0
+                    self.task_state = 'task_completed'
+                    self.image_land_state = 1
+                    self.annulus_state = 'in_annulus'
+            elif msg.data == 'NONE':
+                pass
+            elif msg.data == 'DONE':
+                self.controller_image_process_msg.data = 'YELLOW'
+                self.controller_image_process_pub.publish(self.controller_image_process_msg)
+            else:
+                # 假设数据为'1,0',前面为x=,后面为y=,也就是'x=1,y=0'
+                velocity_msg = msg.data.split(',')
+                velocity_x = float(velocity_msg[0])
+                velocity_y = float(velocity_msg[1])
+                velocity_xy = [-velocity_x, -velocity_y]
+                self.velocity_control_list.append(velocity_xy)
+                self.velocity_control(velocity_x, velocity_y, 0.0, 0.0, 0.0, 0.0)
 
     def moving_info_callback(self, msg):
         pass
@@ -218,9 +231,9 @@ class FenswoodDroneController(Node):
 
     def interface_controller_alt_callback(self, msg):
         if self.risk_alarm == '-1': # 如果之后改了risk的逻辑，这里也要改
-            # self.setting_alt = float(msg.data)
+            self.setting_alt = float(msg.data)
             # 为测试
-            self.setting_alt = 20.0
+            # self.setting_alt = 20.0
             self.control_state = 'arming'
             self.change_mode("GUIDED")
             self.state_timer = 0
@@ -281,6 +294,23 @@ class FenswoodDroneController(Node):
         distance=2*asin(sqrt(a))*6371*1000*1000 # 地球平均半径，6371km
         distance=round(distance/1000,3)
         return distance
+
+    def is_drone_still(self):
+        threshold_still = 0.03
+        if self.cur_vel.linear.x > threshold_still or self.cur_vel.linear.x < -threshold_still:
+            return False
+        elif self.cur_vel.linear.y > threshold_still or self.cur_vel.linear.y < -threshold_still:
+            return False
+        elif self.cur_vel.linear.z > threshold_still or self.cur_vel.linear.z < -threshold_still:
+            return False
+        elif self.cur_vel.angular.x > threshold_still or self.cur_vel.angular.x < -threshold_still:
+            return False
+        elif self.cur_vel.angular.y > threshold_still or self.cur_vel.angular.y < -threshold_still:
+            return False
+        elif self.cur_vel.angular.z > threshold_still or self.cur_vel.angular.z < -threshold_still:
+            return False
+        else:
+            return True
 
     def state_transition(self):
         if self.control_state == 'init':
@@ -364,7 +394,7 @@ class FenswoodDroneController(Node):
                             return('landing')
                         else:
                             return('exit')
-                    else: # last_alt_rel为None，说吗arming都没进，直接exit
+                    else: # last_alt_rel为None，说明arming都没进，直接exit
                         return('exit')
                 else:
                     if self.annulus_state == 'in_annulus':
@@ -417,12 +447,12 @@ class FenswoodDroneController(Node):
         elif self.control_state == 'climbing':
             if self.last_alt_rel > self.setting_alt - 1.0:
                 self.get_logger().info('Close enough to flight altitude')
-                if self.flag == 0:
-                    self.check_state = 'annulus_check'
-                    return('checking')
+                # if self.flag == 0:
+                self.check_state = 'annulus_check'
+                return('checking')
                 # 为测试
-                else:
-                    return('return_home')
+                # else:
+                    # return('return_home')
             elif self.state_timer > 60:
                 # timeout
                 self.get_logger().error('Failed to reach altitude')
@@ -434,7 +464,7 @@ class FenswoodDroneController(Node):
         elif self.control_state == 'on_way':
             if self.task_state == 'task_not_completed':
                 dis = self.geo_distance(self.last_pos.longitude, self.last_pos.latitude, self.target_position[1], self.target_position[0])
-                if dis > self.target_dis - 1.0 and dis < self.target_dis + 1.0:
+                if dis < self.target_dis + 1.0:
                     self.velocity_control(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
                     self.goal_position = []
                     return('hover')
@@ -466,16 +496,15 @@ class FenswoodDroneController(Node):
                 self.get_logger().info('Close enough to ground')
                 if self.last_status.armed == False:
                     # 为测试
-                    self.flag = 1
-                    self.task_state = 'task_completed'
+                    # self.flag = 1
                     if self.annulus_state == 'in_annulus':
                         self.controller_interface_annulus_msg.data = 'in_annulus landing finished'
                         self.controller_interface_annulus_pub.publish(self.controller_interface_annulus_msg)
                         return('wait_for_user')
                     else:
                         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        return('wait_for_user')# 为测试改为的wait for user 
-                        # return('exit')
+                        # return('wait_for_user')# 为测试改为的wait for user 
+                        return('exit')
                 else:
                     return('landing_down')
             elif self.state_timer > 60:
@@ -487,12 +516,13 @@ class FenswoodDroneController(Node):
                 return('landing_down')
 
         elif self.control_state == 'image_process':
-            dis = self.geo_distance(self.last_pos.longitude, self.last_pos.latitude, self.target_position[1], self.target_position[0])
-            if dis > 35.0 + 3.0 and dis < 50.0 - 3.0:
-                self.annulus_state = 'in_annulus'
+            # dis = self.geo_distance(self.last_pos.longitude, self.last_pos.latitude, self.target_position[1], self.target_position[0])
+            # if dis > 35.0 + 3.0 and dis < 50.0 - 3.0:
+            # if dis > 34.9 and dis < 50.1:
+                # self.annulus_state = 'in_annulus'
                 # self.controller_image_process_msg.data = 'in annulus'
                 # self.controller_image_process_pub.publish(self.controller_image_process_msg)
-            elif self.state_timer > 600:
+            if self.state_timer > 600:
                 if self.annulus_state == 'in_annulus':
                     return('fly_out_of_annulus')
                 else:
@@ -502,10 +532,12 @@ class FenswoodDroneController(Node):
 
         elif self.control_state == 'fly_out_of_annulus':
             if len(self.velocity_control_list) > 0:
-                self.velocity_control(self.velocity_control_list[-1][0], self.velocity_control_list[-1][1], 0.0, 0.0, 0.0, 0.0)
-                del self.velocity_control_list[-1]
+                if self.is_drone_still():
+                    self.velocity_control(self.velocity_control_list[-1][0], self.velocity_control_list[-1][1], 0.0, 0.0, 0.0, 0.0)
+                    del self.velocity_control_list[-1]
                 return('fly_out_of_annulus')
             else:
+                self.annulus_state = 'out_of_annulus'
                 return('return_home')
 
         elif self.control_state == 'return_home':

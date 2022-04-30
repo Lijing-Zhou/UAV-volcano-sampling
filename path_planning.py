@@ -126,7 +126,7 @@ class PathPlanning(Node):
 
         while True:
             if len(open_set) == 0:
-                self.message = "Open set is empty.."
+                self.message = "Open set is empty."
                 break
 
             # get the min value's index in open_set
@@ -323,6 +323,7 @@ class PathPlanning(Node):
         # self.ox, self.oy = self.obstacle_map_init(self.fly_boundary_position, self.no_fly_zone) 
         self.calc_obstacle_map() 
         rx, ry = self.planning(-267155, 5142341, -266877, 5142192)
+
         if len(rx) == len(ry):
             current_pos = [-2.67155, 51.42341]
 
