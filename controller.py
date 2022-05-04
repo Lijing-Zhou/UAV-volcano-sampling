@@ -83,6 +83,9 @@ class FenswoodDroneController(Node):
 
         self.controller_interface_annulus_pub = self.create_publisher(String, '/controller_interface/annulus', 10)
         self.controller_interface_annulus_msg = String()
+        
+        self.alt_msg_pub = self.create_publisher(String, '/vehicle_1/alt_msg_input', 10)
+        self.alt_msg = String() 
 
         self.controller_risk_pub = self.create_publisher(String, '/controller_risk', 10)
         self.controller_risk_msg = String()
@@ -122,9 +125,10 @@ class FenswoodDroneController(Node):
         pos_sub = self.create_subscription(NavSatFix, '/vehicle_1/mavros/global_position/global', self.position_callback, 10)
         # create subscriber for risk management
         risk_controller_sub = self.create_subscription(String, '/vehicle_1/risk_alarm_state', self.risk_alarm_callback ,10)
-
-        interface_controller_alt_sub = self.create_subscription(String, '/interface_controller/alt', self.interface_controller_alt_callback, 10)
-
+        
+        #interface_controller_alt_sub = self.create_subscription(String, '/interface_controller/alt', self.interface_controller_alt_callback, 10)
+        interface_controller_alt_sub = self.create_subscription(String, '/vehicle_1/alt_msg_input', self.interface_controller_alt_callback, 10)
+                       
         interface_controller_sub = self.create_subscription(String, '/interface_controller', self.interface_controller_msg_callback, 10)
 
         path_planning_controller_sub = self.create_subscription(String, '/path_planning_controller', self.path_planning_controller_msg_callback, 10)
@@ -229,14 +233,16 @@ class FenswoodDroneController(Node):
                 # self.control_state = 'return_home'
                 # self.state_timer = 0
 
+
     def interface_controller_alt_callback(self, msg):
         if self.risk_alarm == '-1': # 如果之后改了risk的逻辑，这里也要改
-            self.setting_alt = float(msg.data)
-            # 为测试
-            # self.setting_alt = 20.0
-            self.control_state = 'arming'
-            self.change_mode("GUIDED")
-            self.state_timer = 0
+           if(float(msg.data)>=10 and float(msg.data)<=50.0):
+              self.setting_alt = float(msg.data)
+              # 为测试
+              # self.setting_alt = 20.0
+              self.control_state = 'arming'
+              self.change_mode("GUIDED")
+              self.state_timer = 0
 
     def request_data_stream(self,msg_id,msg_interval):
         cmd_req = CommandLong.Request()
@@ -329,7 +335,8 @@ class FenswoodDroneController(Node):
                     self.request_data_stream(31, 1000000)
 
                     self.request_data_stream(105, 1000000)
-                    # self.request_data_stream(135, 1000000)
+                    
+                    self.request_data_stream(135, 1000000)
 
 
                     # change mode to GUIDED
@@ -394,7 +401,7 @@ class FenswoodDroneController(Node):
                             return('landing')
                         else:
                             return('exit')
-                    else: # last_alt_rel为None，说明arming都没进，直接exit
+                    else: # last_alt_rel为None，说吗arming都没进，直接exit
                         return('exit')
                 else:
                     if self.annulus_state == 'in_annulus':
@@ -528,10 +535,6 @@ class FenswoodDroneController(Node):
                 else:
                     return('return_home')
 
-            dis = self.geo_distance(self.last_pos.longitude, self.last_pos.latitude, self.target_position[1], self.target_position[0])
-            if dis < 50:
-                self.annulus_state = 'in_annulus'
-
             return('image_process')
 
         elif self.control_state == 'fly_out_of_annulus':
@@ -552,7 +555,7 @@ class FenswoodDroneController(Node):
             self.controller_path_planning_msg.data = 'return_home,{},{}'.format(self.last_pos.latitude, self.last_pos.longitude)
             self.controller_path_planning_pub.publish(self.controller_path_planning_msg)
             return('wait_for_path_planning')
-
+            
         elif self.control_state == 'return_home_user':
             if self.annulus_state == 'out_of_annulus':
                 self.goal_position = []
@@ -571,6 +574,7 @@ class FenswoodDroneController(Node):
                 return('exit') # 应该是转换为用户选择
             else:
                 return('wait_for_path_planning')
+            
 
         elif self.control_state == 'exit':
             # nothing else to do

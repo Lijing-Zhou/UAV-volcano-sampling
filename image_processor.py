@@ -237,9 +237,8 @@ class Imageprocessor(Node):
         # 无人机经纬度坐标
         self.global_loca = Location(0,0)
         # 目的地坐标
+        # self.dest_loca = Location(51.4219206, -2.6687700)
         self.dest_loca = Location(51.4219206, -2.6687700)
-        # self.dest_loca = Location(51.4214509, -2.6693021)
-        # self.dest_loca = Location(51.4206399, -2.6694456)
 
         # 目的地在相机图像中的坐标
         self.dest_point = Point(0, 0)
@@ -608,7 +607,7 @@ class Imageprocessor(Node):
             img_output = self.draw_dest(img_output)
 
         self.img_pub.publish(self.br.cv2_to_imgmsg(img_output,'bgr8'))   
-
+       
                 
     def draw_contours(self, raw, output, mode):
         # 高斯滤波

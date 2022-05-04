@@ -50,11 +50,13 @@ class RiskInterface(Node):
         if msg.data == 'arm check':
             self.get_logger().info('receiving the risk msg')
             # self.risk_pub_msg = self.risk_ass.arm_check()
-            self.risk_pub_msg.data = 'Please check if the UAV can be armed'
+            self.risk_pub_msg.data = 'Please check if the UAV can be armed.'
             self.risk_msg_pub.publish(self.risk_pub_msg)
 
         if msg.data == 'arm checked':
             self.risk_state_msg.data = '-1'
+            self.risk_pub_msg.data = 'UAV is armed. Please set flying altitude. ==>'
+            self.risk_msg_pub.publish(self.risk_pub_msg)
             self.risk_alarm_pub.publish(self.risk_state_msg)
 
     def timer_callback(self):
