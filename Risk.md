@@ -1,20 +1,20 @@
 # Risk
 
-topic: /vehicle_1/risk_msg_output 用于输出到interface给用户看（例如：是否arm）
+topic: /vehicle_1/risk_msg_output: show msg to user by outputing to interface（for example: arm?）
 
-topic: /vehicle_1/risk_msg_input 用于risk_management node输入
+topic: /vehicle_1/risk_msg_input: risk_management node input
 
-(interface：(例如)是否arm，若用户选择是，interface需要向此input topic发送‘arm checked'
+(interface：(for example) arm? if yes，interface needs send ‘arm checked' to topic
 
  controller: 
 
-​				check状态: 发送’arm check'
+​				check: send ’arm check'
 
-​				init 结束: 发送'init finished'
+​				init finished: send 'init finished'
 
 )
 
-topic: /vehicle_1/risk_alarm_state 用于向controller node传输risk alarm state
+topic: /vehicle_1/risk_alarm_state: send risk alarm state to controller node 
 
 (state:
 
