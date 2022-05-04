@@ -1,0 +1,306 @@
+{
+  "configById": {
+    "ImageViewPanel!orin6o": {
+      "cameraTopic": "/vehicle_1/camera/image_output",
+      "customMarkerTopicOptions": [],
+      "enabledMarkerTopics": [],
+      "mode": "fit",
+      "pan": {
+        "x": 17.287312985698996,
+        "y": 24.474767477651667
+      },
+      "rotation": 0,
+      "synchronize": false,
+      "transformMarkers": false,
+      "zoom": 0.8366949510833958
+    },
+    "RawMessages!1hx9q8e": {
+      "topicPath": "/vehicle_1/risk_msg_output.data",
+      "diffTopicPath": "",
+      "diffMethod": "custom",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    },
+    "Publish!4elne20": {
+      "topicName": "/controller_risk",
+      "datatype": "std_msgs/msg/String",
+      "buttonText": "Arming",
+      "buttonTooltip": "",
+      "buttonColor": "#00A871",
+      "advancedView": true,
+      "value": "{\n  \"data\": \"arm checked\"\n}"
+    },
+    "RawMessages!48zo3o1": {
+      "topicPath": "/vehicle_1/alt_msg_output.data",
+      "diffTopicPath": "",
+      "diffMethod": "custom",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    },
+    "Publish!2zdkwud": {
+      "topicName": "/vehicle_1/alt_msg_input",
+      "datatype": "std_msgs/msg/String",
+      "buttonText": "Set",
+      "buttonTooltip": "",
+      "buttonColor": "#00A871",
+      "advancedView": true,
+      "value": "{\n  \"data\": \"30.0\"\n}"
+    },
+    "Teleop!2j6348o": {
+      "topic": "/vehicle_1/mavros/setpoint_velocity/cmd_vel_unstamped",
+      "publishRate": 5,
+      "upButton": {
+        "field": "linear-y",
+        "value": 1
+      },
+      "downButton": {
+        "field": "linear-y",
+        "value": -1
+      },
+      "leftButton": {
+        "field": "linear-x",
+        "value": -1
+      },
+      "rightButton": {
+        "field": "linear-x",
+        "value": 1
+      }
+    },
+    "Teleop!347ukyp": {
+      "topic": "/vehicle_1/mavros/setpoint_velocity/cmd_vel_unstamped",
+      "publishRate": 5,
+      "upButton": {
+        "field": "linear-z",
+        "value": 1
+      },
+      "downButton": {
+        "field": "linear-z",
+        "value": -1
+      },
+      "leftButton": {
+        "field": "angular-z",
+        "value": 0.1
+      },
+      "rightButton": {
+        "field": "angular-z",
+        "value": -0.1
+      }
+    },
+    "RawMessages!thnams": {
+      "topicPath": "/vehicle_1/mavros/state",
+      "diffTopicPath": "",
+      "diffMethod": "custom",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    },
+    "Publish!3gldtd7": {
+      "topicName": "/foxyglove_controller",
+      "datatype": "std_msgs/msg/String",
+      "buttonText": "Abort",
+      "buttonTooltip": "",
+      "buttonColor": "#ff8205",
+      "advancedView": false,
+      "value": "{\n  \"data\": \"exit\"\n}"
+    },
+    "Publish!39b60gs": {
+      "topicName": "/foxyglove_controller",
+      "datatype": "std_msgs/msg/String",
+      "buttonText": "RTL",
+      "buttonTooltip": "",
+      "buttonColor": "#e60909",
+      "advancedView": false,
+      "value": "{\n  \"data\": \"return_home_user\"\n}"
+    },
+    "Tab!290byns": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "layout": "ImageViewPanel!orin6o",
+          "title": "1"
+        }
+      ]
+    },
+    "StateTransitions!2pv2zpn": {
+      "paths": [
+        {
+          "value": "/vehicle_1/mavros/state.mode",
+          "timestampMethod": "receiveTime"
+        }
+      ]
+    },
+    "Tab!48avtvx": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "Launch Check",
+          "layout": {
+            "first": {
+              "first": "RawMessages!1hx9q8e",
+              "second": "Publish!4elne20",
+              "direction": "column",
+              "splitPercentage": 49.2783139998229
+            },
+            "second": {
+              "first": "RawMessages!48zo3o1",
+              "second": "Publish!2zdkwud",
+              "direction": "column",
+              "splitPercentage": 48.994952625520234
+            },
+            "direction": "row",
+            "splitPercentage": 50.58139534883721
+          }
+        },
+        {
+          "title": "Manual Control",
+          "layout": {
+            "first": "Teleop!2j6348o",
+            "second": "Teleop!347ukyp",
+            "direction": "row"
+          }
+        }
+      ]
+    },
+    "Tab!f1ttjs": {
+      "activeTabIdx": 0,
+      "tabs": [
+        {
+          "title": "Status",
+          "layout": {
+            "first": "RawMessages!thnams",
+            "second": {
+              "first": "Publish!3gldtd7",
+              "second": "Publish!39b60gs",
+              "direction": "row"
+            },
+            "direction": "column",
+            "splitPercentage": 81.35099337748343
+          }
+        }
+      ]
+    },
+    "map!xavixf": {
+      "disabledTopics": [],
+      "zoomLevel": 16,
+      "layer": "satellite"
+    },
+    "RawMessages!1hhg7zg": {
+      "topicPath": "/vehicle_1/mavros/global_position/global.latitude",
+      "diffTopicPath": "",
+      "diffMethod": "custom",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    },
+    "RawMessages!4k94gmj": {
+      "topicPath": "/vehicle_1/mavros/global_position/global.longitude",
+      "diffTopicPath": "",
+      "diffMethod": "custom",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    },
+    "RawMessages!3h03gxs": {
+      "topicPath": "/vehicle_1/mavros/global_position/global.altitude",
+      "diffTopicPath": "",
+      "diffMethod": "custom",
+      "diffEnabled": false,
+      "showFullMessageForDiff": false
+    },
+    "Plot!xbpyyo": {
+      "paths": [
+        {
+          "value": "/vehicle_1/mavros/local_position/pose.pose.position.z",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "minYValue": 0,
+      "maxYValue": 50,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": false,
+      "showSidebar": false,
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarWidth": 240,
+      "legendDisplay": "top",
+      "sidebarDimension": 240,
+      "title": "Relative Altitude",
+      "followingViewWidth": 500
+    },
+    "Plot!320m9dl": {
+      "paths": [
+        {
+          "value": "/vehicle_1/mavros/battery.percentage",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "minYValue": 0,
+      "maxYValue": 1,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": false,
+      "showSidebar": false,
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarWidth": 240,
+      "legendDisplay": "top",
+      "sidebarDimension": 240,
+      "title": "Battery",
+      "followingViewWidth": 500
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "playbackConfig": {
+    "speed": 1,
+    "messageOrder": "receiveTime"
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": {
+        "first": "Tab!290byns",
+        "second": "StateTransitions!2pv2zpn",
+        "direction": "column",
+        "splitPercentage": 84.73520249221184
+      },
+      "second": {
+        "first": "Tab!48avtvx",
+        "second": "Tab!f1ttjs",
+        "direction": "row",
+        "splitPercentage": 73.44150298889839
+      },
+      "direction": "column",
+      "splitPercentage": 60.71428571428571
+    },
+    "second": {
+      "first": {
+        "first": "map!xavixf",
+        "second": {
+          "first": {
+            "first": "RawMessages!1hhg7zg",
+            "second": "RawMessages!4k94gmj",
+            "direction": "row",
+            "splitPercentage": 51.33819951338198
+          },
+          "second": "RawMessages!3h03gxs",
+          "direction": "row",
+          "splitPercentage": 65.65495207667733
+        },
+        "direction": "column",
+        "splitPercentage": 79.49790794979079
+      },
+      "second": {
+        "first": "Plot!xbpyyo",
+        "second": "Plot!320m9dl",
+        "direction": "column"
+      },
+      "direction": "column",
+      "splitPercentage": 48.775510204081634
+    },
+    "splitPercentage": 65.16416249304396
+  }
+}
